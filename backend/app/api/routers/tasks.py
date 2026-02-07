@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlmodel import Session, select, desc, asc, or_
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy import and_, String
-from ...models import Task, User, TaskUpdate
+from ...models import Task, User, TaskUpdate, TaskBase
 from ...database import get_session
 from ...jwt_utils import get_current_user_from_token
 
@@ -302,19 +302,22 @@ def get_task(
 
 @router.post("/tasks", response_model=Task, status_code=status.HTTP_201_CREATED)
 def create_task(
-    task: Task,
+    task: TaskBase,
     current_user: User = Depends(get_current_user_from_token),
     session: Session = Depends(get_session)
 ):
     """
     Create a new task for the current user.
     """
-    # Ensure the task is assigned to the current user
-    task.user_id = current_user.id
-    session.add(task)
+    # Create the task with the current user's ID
+    # Using model_dump() to convert to dictionary
+    task_data = task.model_dump()
+    task_data['user_id'] = current_user.id
+    db_task = Task(**task_data)
+    session.add(db_task)
     session.commit()
-    session.refresh(task)
-    return task
+    session.refresh(db_task)
+    return db_task
 
 @router.put("/tasks/{task_id}", response_model=Task)
 def update_task(

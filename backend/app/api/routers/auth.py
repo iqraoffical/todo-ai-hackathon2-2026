@@ -36,13 +36,13 @@ class UserLogin(BaseModel):
     password: str
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # Initialize password hashing context
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    # Initialize password hashing context with argon2 as primary scheme
+    pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    # Initialize password hashing context
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    # Initialize password hashing context with argon2 as primary scheme
+    pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
     return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -64,7 +64,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 @router.post("/sign-up", response_model=Token)
 def sign_up(user: UserCreate, session: Session = Depends(get_session)):
     # Check if user already exists
-    existing_user = session.exec(select(User).where(User.email == user.email)).first()
+    statement = select(User).where(User.email == user.email)
+    result = session.execute(statement)
+    existing_user = result.scalar_one_or_none()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -80,7 +82,7 @@ def sign_up(user: UserCreate, session: Session = Depends(get_session)):
     # Create access token with user ID instead of email
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "user_id": db_user.id}, expires_delta=access_token_expires
+        data={"sub": str(db_user.id), "user_id": str(db_user.id)}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
@@ -88,7 +90,10 @@ def sign_up(user: UserCreate, session: Session = Depends(get_session)):
 @router.post("/sign-in", response_model=Token)
 def sign_in(user_credentials: UserLogin, session: Session = Depends(get_session)):
     # Find user in database
-    user = session.exec(select(User).where(User.email == user_credentials.email)).first()
+    statement = select(User).where(User.email == user_credentials.email)
+    result = session.execute(statement)
+    user = result.scalar_one_or_none()
+
     if not user or not verify_password(user_credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -99,7 +104,7 @@ def sign_in(user_credentials: UserLogin, session: Session = Depends(get_session)
     # Create access token with user ID
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "user_id": user.id}, expires_delta=access_token_expires
+        data={"sub": str(user.id), "user_id": str(user.id)}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}

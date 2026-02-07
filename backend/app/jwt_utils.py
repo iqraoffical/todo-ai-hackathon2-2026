@@ -97,7 +97,8 @@ async def get_current_user_from_token(
     token_data = verify_jwt_token(token)
 
     # Get user from database based on the user ID from the token
-    user = session.exec(select(User).where(User.id == token_data.user_id)).first()
+    result = session.execute(select(User).where(User.id == token_data.user_id))
+    user = result.scalar_one_or_none()
     if user is None:
         # If user doesn't exist in our local database, we might need to create it
         # based on the information in the token

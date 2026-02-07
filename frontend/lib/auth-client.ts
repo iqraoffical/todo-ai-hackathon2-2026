@@ -1,36 +1,41 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from './api-client';
 
 // Custom authentication functions to work with our backend API
 export const signIn = async (provider: string, credentials: { email: string; password: string; redirectTo?: string }) => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/sign-in`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: credentials.email,
-        password: credentials.password,
-      }),
+    const response = await apiClient.post('/api/auth/sign-in', {
+      email: credentials.email,
+      password: credentials.password,
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || 'Sign in failed');
-    }
-
     // Store the token in localStorage or sessionStorage
-    if (data.access_token) {
-      localStorage.setItem('auth_token', data.access_token);
+    if (response.data.access_token) {
+      localStorage.setItem('auth_token', response.data.access_token);
+
+      // Also store in a cookie for middleware compatibility
+      document.cookie = `access_token=${response.data.access_token}; path=/;`;
     }
 
-    return { success: true, data };
-  } catch (error) {
+    return { success: true, data: response.data };
+  } catch (error: any) {
     console.error('Sign in error:', error);
-    return { error: error instanceof Error ? error.message : 'An unexpected error occurred' };
+
+    let errorMessage = 'An unexpected error occurred';
+    if (error.response) {
+      // Server responded with error status
+      errorMessage = error.response.data.detail || error.response.data.message || 'Sign in failed';
+    } else if (error.request) {
+      // Request was made but no response received
+      errorMessage = 'Network error: Unable to connect to server. Please check if the backend is running.';
+    } else {
+      // Something else happened
+      errorMessage = error.message;
+    }
+
+    return { error: errorMessage };
   }
 };
 
@@ -38,6 +43,9 @@ export const signOut = async () => {
   try {
     // Clear the stored token
     localStorage.removeItem('auth_token');
+
+    // Remove the cookie as well
+    document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
 
     return { success: true };
   } catch (error) {
@@ -48,29 +56,33 @@ export const signOut = async () => {
 
 export const signUp = async (userData: { email: string; password: string; name: string }) => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/sign-up`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || 'Sign up failed');
-    }
+    const response = await apiClient.post('/api/auth/sign-up', userData);
 
     // Store the token in localStorage or sessionStorage
-    if (data.access_token) {
-      localStorage.setItem('auth_token', data.access_token);
+    if (response.data.access_token) {
+      localStorage.setItem('auth_token', response.data.access_token);
+
+      // Also store in a cookie for middleware compatibility
+      document.cookie = `access_token=${response.data.access_token}; path=/;`;
     }
 
-    return { success: true, data };
-  } catch (error) {
+    return { success: true, data: response.data };
+  } catch (error: any) {
     console.error('Sign up error:', error);
-    return { error: error instanceof Error ? error.message : 'An unexpected error occurred' };
+
+    let errorMessage = 'An unexpected error occurred';
+    if (error.response) {
+      // Server responded with error status
+      errorMessage = error.response.data.detail || error.response.data.message || 'Sign up failed';
+    } else if (error.request) {
+      // Request was made but no response received
+      errorMessage = 'Network error: Unable to connect to server. Please check if the backend is running.';
+    } else {
+      // Something else happened
+      errorMessage = error.message;
+    }
+
+    return { error: errorMessage };
   }
 };
 

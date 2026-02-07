@@ -1,20 +1,17 @@
 import axios from 'axios';
-import { getJwtToken } from './auth-client';
 
-// Create an Axios instance for API calls
+// Create an axios instance with default configuration
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api', // Update to your backend URL
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
 });
 
-// Request interceptor to add JWT token to all requests
+// Request interceptor to add auth token to requests
 apiClient.interceptors.request.use(
-  async (config) => {
-    const token = await getJwtToken();
-    
+  (config) => {
+    const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
     return config;
   },
   (error) => {
@@ -22,19 +19,17 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle 401 errors (token expired/invalid)
+// Response interceptor to handle token expiration or invalid tokens
 apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
+  (response) => {
+    return response;
+  },
+  (error) => {
     if (error.response?.status === 401) {
-      // Token might be expired or invalid
-      // You could redirect to login page or trigger a token refresh here
-      console.error('Unauthorized access - token may be expired');
-      
-      // Optionally, redirect to login page
-      // window.location.href = '/login';
+      // Token might be expired or invalid, redirect to sign in
+      localStorage.removeItem('auth_token');
+      window.location.href = '/signin';
     }
-    
     return Promise.reject(error);
   }
 );

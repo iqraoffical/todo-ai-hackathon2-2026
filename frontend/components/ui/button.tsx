@@ -55,29 +55,3 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button";
 
 export { Button, buttonVariants };
-
-
-
-import { auth } from 'better-auth/middleware';
-
-
-outh_credit.json
-{
-  "access_token": "stnBhX9ZDT6GVrKnUu30KV9BGDIli74olw8l6sG4C8oh7X2k7AZfcE0sxB2UGXzOMuNHwE9xNAnUUAxlnjQPpw",
-  "token_type": "Bearer",
-  "refresh_token": "QVOlqofw9wh1d8bGGOJQZgkEO91Yo39ghy8Cy5SQt0VnLytxA_94GRW-eVkZBsjXvReaUSEyb4gEGG-RbbDRVg",
-  "resource_url": "portal.qwen.ai",
-  "expiry_date": 1769591708395
-}import { auth } from 'better-auth/middleware';
-
-
-
-Sign up
-Email
-iqraehsan926@gmail.com
-Password
-
-HAPPY45678#
-
-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
-

@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 export async function middleware(request: NextRequest) {
   try {
     // Check if there's a token in the request cookies
-    const token = request.cookies.get('access_token')?.value;
+    let token = request.cookies.get('access_token')?.value;
+
+    // If not in cookies, check for token in localStorage via header (for API calls)
+    if (!token) {
+      token = request.headers.get('authorization')?.replace('Bearer ', '');
+    }
 
     // Define protected routes
     const isProtectedRoute = request.nextUrl.pathname.startsWith('/tasks') ||
